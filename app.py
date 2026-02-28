@@ -15,8 +15,10 @@ st.set_page_config(
 # =====================================
 # LOAD MODEL
 # =====================================
-with open("model_obesitas.pkl", "rb") as f:
-    data = pickle.load(f)
+import joblib
+
+model = joblib.load("obesity_lifestyle.joblib")
+le = joblib.load("label_encoder.joblib")
 
 model = data["model"]
 scaler = data["scaler"]
