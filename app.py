@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import pickle
+import joblib
 
 # =====================================
 # KONFIGURASI HALAMAN
@@ -15,23 +15,13 @@ st.set_page_config(
 # =====================================
 # LOAD MODEL
 # =====================================
-import joblib
-
 model = joblib.load("obesity_lifestyle.joblib")
 le = joblib.load("label_encoder.joblib")
 
 # =====================================
-# URUTAN LEVEL OBESITAS (7 KELAS)
+# URUTAN LEVEL OBESITAS (HARUS SAMA DENGAN DATASET)
 # =====================================
-ORDER = [
-    "Insufficient_Weight",
-    "Normal_Weight",
-    "Overweight_Level_I",
-    "Overweight_Level_II",
-    "Obesity_Type_I",
-    "Obesity_Type_II",
-    "Obesity_Type_III"
-]
+ORDER = list(le.classes_)  # otomatis ambil dari label encoder
 
 # =====================================
 # FUNGSI BMI
@@ -66,9 +56,12 @@ def bmi_to_level7(bmi):
         return "Obesity_Type_III"
 
 # =====================================
-# FUNGSI BATAS PERUBAHAN (MAKS 1 LEVEL)
+# FUNGSI ARAH
 # =====================================
 def clamp_step(current_label, target_label):
+    if current_label not in ORDER or target_label not in ORDER:
+        return current_label
+
     c = ORDER.index(current_label)
     t = ORDER.index(target_label)
 
@@ -79,6 +72,9 @@ def clamp_step(current_label, target_label):
     return ORDER[t]
 
 def arah_perubahan(current_label, lifestyle_label):
+    if current_label not in ORDER or lifestyle_label not in ORDER:
+        return "Tidak dapat ditentukan"
+
     c = ORDER.index(current_label)
     l = ORDER.index(lifestyle_label)
 
@@ -90,7 +86,7 @@ def arah_perubahan(current_label, lifestyle_label):
         return "Cenderung STABIL"
 
 # =====================================
-# FUNGSI PREDIKSI LIFESTYLE ONLY
+# FUNGSI PREDIKSI (PIPELINE VERSION)
 # =====================================
 def prediksi_lifestyle(data_lifestyle):
 
@@ -100,7 +96,7 @@ def prediksi_lifestyle(data_lifestyle):
     pred_label = le.inverse_transform([pred_num])[0]
 
     proba = model.predict_proba(df)[0]
-    confidence = max(proba)
+    confidence = float(np.max(proba))
 
     return pred_label, confidence
 
@@ -112,15 +108,12 @@ st.markdown("Model Machine Learning berbasis Pola Hidup")
 
 st.subheader("Input Data")
 
-# Identitas dasar
 gender = st.selectbox("Jenis Kelamin", ["Male", "Female"])
 age = st.number_input("Usia (tahun)", 10, 80, 25)
 
-# Data fisik (hanya untuk BMI)
 height = st.number_input("Tinggi Badan (meter)", 1.0, 2.5, 1.70)
 weight = st.number_input("Berat Badan (kg)", 30.0, 200.0, 70.0)
 
-# Lifestyle
 fcvc = st.slider("Konsumsi Sayur (1–3)", 1, 3, 2)
 ncp = st.slider("Jumlah Makan Utama per Hari", 1, 4, 3)
 ch2o = st.slider("Konsumsi Air (1–3)", 1, 3, 2)
@@ -135,16 +128,14 @@ mtrans = st.selectbox("Moda Transportasi", ["Public_Transportation", "Walking", 
 scc = st.selectbox("Monitoring Kalori", ["yes", "no"])
 
 # =====================================
-# TOMBOL ANALISIS
+# ANALISIS
 # =====================================
 if st.button("Analisis Risiko"):
 
-    # Hitung BMI
     bmi = hitung_bmi(weight, height)
     bmi_cat = kategori_bmi(bmi)
     bmi_level7 = bmi_to_level7(bmi)
 
-    # Data untuk model (tanpa Height & Weight)
     lifestyle_data = {
         "Gender": gender,
         "Age": age,
@@ -164,7 +155,6 @@ if st.button("Analisis Risiko"):
     pred_label, confidence = prediksi_lifestyle(lifestyle_data)
     pred_label_clean = pred_label.replace("_", " ")
 
-    # Tentukan arah
     target_step = clamp_step(bmi_level7, pred_label)
     arah = arah_perubahan(bmi_level7, pred_label)
 
@@ -173,20 +163,18 @@ if st.button("Analisis Risiko"):
 
     st.write(f"**BMI:** {bmi:.2f}")
     st.write(f"**Kategori BMI:** {bmi_cat}")
-    st.write(f"**Level Saat Ini (7 tingkat):** {bmi_level7.replace('_',' ')}")
+    st.write(f"**Level Saat Ini:** {bmi_level7.replace('_',' ')}")
 
-    st.write(f"**Prediksi ML Berdasarkan Pola Hidup:** {pred_label_clean}")
+    st.write(f"**Prediksi ML (Lifestyle):** {pred_label_clean}")
     st.write(f"**Keyakinan Model:** {confidence:.2%}")
 
     st.subheader("📈 Estimasi Arah Perubahan")
     st.write(f"**Arah:** {arah}")
-    st.write(f"**Target Realistis (maks 1 tingkat):** {target_step.replace('_',' ')}")
-
-    st.markdown("### 🧾 Kesimpulan")
+    st.write(f"**Target Realistis:** {target_step.replace('_',' ')}")
 
     if ORDER.index(target_step) < ORDER.index(bmi_level7):
-        st.success("Pola hidup kamu mendukung penurunan tingkat obesitas secara bertahap.")
+        st.success("Pola hidup mendukung penurunan tingkat obesitas secara bertahap.")
     elif ORDER.index(target_step) > ORDER.index(bmi_level7):
-        st.warning("Pola hidup kamu berpotensi meningkatkan risiko ke tingkat lebih tinggi.")
+        st.warning("Pola hidup berpotensi meningkatkan risiko ke tingkat lebih tinggi.")
     else:
-        st.info("Pola hidup kamu cenderung mempertahankan kondisi saat ini.")
+        st.info("Pola hidup cenderung mempertahankan kondisi saat ini.")
