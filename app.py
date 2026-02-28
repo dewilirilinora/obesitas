@@ -20,14 +20,6 @@ import joblib
 model = joblib.load("obesity_lifestyle.joblib")
 le = joblib.load("label_encoder.joblib")
 
-model = data["model"]
-scaler = data["scaler"]
-ohe = data["ohe"]
-le_target = data["le_target"]
-numerical_features = data["numerical_features"]
-binary_cat = data["binary_cat"]
-multi_cat = data["multi_cat"]
-
 # =====================================
 # URUTAN LEVEL OBESITAS (7 KELAS)
 # =====================================
