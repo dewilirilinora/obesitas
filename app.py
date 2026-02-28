@@ -96,23 +96,13 @@ def prediksi_lifestyle(data_lifestyle):
 
     df = pd.DataFrame([data_lifestyle])
 
-    X_num = df[numerical_features].values
+    pred_num = model.predict(df)[0]
+    pred_label = le.inverse_transform([pred_num])[0]
 
-    X_binary = np.array([
-        1 if df[col].values[0] in ["yes", "Male"] else 0
-        for col in binary_cat
-    ]).reshape(1, -1)
+    proba = model.predict_proba(df)[0]
+    confidence = max(proba)
 
-    X_multi = ohe.transform(df[multi_cat])
-
-    X_final = np.hstack([X_num, X_binary, X_multi])
-    X_scaled = scaler.transform(X_final)
-
-    proba = model.predict_proba(X_scaled)[0]
-    idx = np.argmax(proba)
-    diagnosis = le_target.inverse_transform([idx])[0]
-
-    return diagnosis, float(proba[idx])
+    return pred_label, confidence
 
 # =====================================
 # UI
