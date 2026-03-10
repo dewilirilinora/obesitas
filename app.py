@@ -184,7 +184,6 @@ if st.button("Analisis Risiko"):
 
     st.subheader("📈 Estimasi Arah Perubahan")
     st.write(f"**Arah:** {arah}")
-    st.write(f"**Target Realistis (maks 1 tingkat):** {target_step.replace('_',' ')}")
 
     if missing_cols:
         st.info(f"Catatan: model meminta kolom tambahan yang tidak kamu input, jadi otomatis diisi default: {missing_cols}")
